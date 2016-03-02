@@ -153,134 +153,16 @@ if echo "$answer" | grep -iq "^y" ;then
         docker build -f Dockerfile -t localhost:5000/logspout .
         docker run -d -p $IP_addr:8000:8000 --name="logspout-localhost" --link elkstack_elk_1:logspout -v /var/run/docker.sock:/tmp/docker.sock -e ROUTE_URIS=logstash://$IP_addr:55514 localhost:5000/logspout:latest 
         
-#        echo 
-#        echo "################################################################################"
-#        echo "#  Deploying container for Graphite, Statsd and Graphana ...                   #"
-#        echo "################################################################################"
-#        echo 
+        echo 
+        echo "################################################################################"
+        echo "#  Deploying container for Graphite, Statsd and Graphana ...                   #"
+        echo "################################################################################"
+        echo 
         docker run --name local-postgres -e POSTGRES_DB=grafana -e POSTGRES_PASSWORD=br0k3r! -d -p 127.0.0.1:5432:5432 postgres:latest
         docker run --name local-mysql -e MYSQL_ROOT_PASSWORD=br0k3r! -e MYSQL_DATABASE=grafana -e MYSQL_USER=grafana -e MYSQL_PASSWORD=br0k3r! -d -p 127.0.0.1:3306:3306 mysql:latest
-#        docker run --name grafana-dashboard --link local-mysql:mysql --link local-postgres:postgres -d -p -p $IP_addr:80:80 -p $IP_addr:81:81 -p $IP_addr:8125:8125/udp -p $IP_addr:8126:8126 kamon/grafana_graphite:latest
         cd $basedir/docker-grafana-graphite
         docker build -f Dockerfile -t localhost:5000/grafana-dashboard .
-        docker run --name local-dashboard --link local-mysql:mysql --link local-postgres:postgres -d -p $IP_addr:80:80 -p $IP_addr:81:81 -p $IP_addr:8125:8125/udp -p $IP_addr:8126:8126 localhost:5000/grafana-dashboard
-#        
-#        echo 
-#        echo "################################################################################"
-#        echo "#  Deploying container for fluentd ...                   #"
-#        echo "################################################################################"
-#        echo 
-#        
-#        mkdir -p /opt/ibm/broker/docker/fluentd/plugins
-#        rm -f $basedir/fluentd/Dockerfile
-#        touch $basedir/fluentd/Dockerfile
-#        rm -f $basedir/fluentd/fluent.conf
-#        touch $basedir/fluentd/fluent.conf
-#        
-#        #Create fluent.conf for fluentd
-#        printf '%s\n<source>' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n  @type  forward' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n  @id    input1' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n  @label @mainstream' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n  port  24224' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n</source>' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n<filter **>' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n  @type stdout' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n</filter>' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n<label @mainstream>' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n  <match docker.**>' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    @type file' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    @id   output_docker1' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    path         /fluentd/log/docker.*.log' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    symlink_path /fluentd/log/docker.log' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    append       true' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    time_slice_format %%Y%%m%%d' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    time_slice_wait   1m' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    time_format       %%Y%%m%%dT%%H%%M%%S%%z' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n  </match>' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n  <match **>' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    @type file' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    @id   output1' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    path         /fluentd/log/data.*.log' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    symlink_path /fluentd/log/data.log' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    append       true' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    time_slice_format %%Y%%m%%d' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    time_slice_wait   10m' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n    time_format       %%Y%%m%%dT%%H%%M%%S%%z' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n  </match>' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n  <match graphite>' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n  type graphite' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n  host localhost # optional' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n  port 2003 # optional' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n  </match>' >>   $basedir/fluentd/fluent.conf
-#        printf '%s\n</label>' >>   $basedir/fluentd/fluent.conf
-#        
-#        #Create Dockerfile for fluentd
-#        printf '%s\nFROM ubuntu:14.04' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nMAINTAINER Sushant Tripathi <sushtrip@in.ibm.com.com>' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nLABEL Description="IBM Fluentd docker image with graphite forwarding" Vendor="IBM" Version="1.0"' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nRUN apt-get update -y && apt-get install -y \' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n              autoconf \' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n              bison \' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n              build-essential \' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n              curl \      ' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n              git \' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n              gcc \' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n              libruby \' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n              libffi-dev \              ' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n              libgdbm3 \' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n              libgdbm-dev \' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n              libncurses5-dev \' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n              libreadline6-dev \              ' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n              libssl-dev \' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n              libyaml-dev \' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n              zlib1g-dev \              ' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n        && rm -rf /var/lib/apt/lists/*' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nRUN useradd ubuntu -d /home/ubuntu -m -U' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nRUN chown -R ubuntu:ubuntu /home/ubuntu' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n# for log storage (maybe shared with host)' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nRUN mkdir -p /fluentd/log' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n# configuration/plugins path (default: copied from .)' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nRUN mkdir -p /fluentd/etc' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nRUN mkdir -p /fluentd/plugins' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nRUN chown -R ubuntu:ubuntu /fluentd' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nRUN chmod a+w -R /fluentd/log/' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nUSER ubuntu' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nWORKDIR /home/ubuntu' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nRUN git clone https://github.com/tagomoris/xbuild.git /home/ubuntu/.xbuild' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nRUN /home/ubuntu/.xbuild/ruby-install 2.2.2 /home/ubuntu/ruby' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nENV PATH /home/ubuntu/ruby/bin:$PATH' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nRUN gem install fluentd -v 0.12.19' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nRUN gem install fluent-plugin-secure-forward' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nRUN gem install fluent-plugin-graphite' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n# RUN gem install fluent-plugin-webhdfs' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nCOPY fluent.conf /fluentd/etc/' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nONBUILD COPY fluent.conf /fluentd/etc/' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nONBUILD COPY plugins /fluentd/plugins/' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nWORKDIR /home/ubuntu' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nENV FLUENTD_OPT=""' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nENV FLUENTD_CONF="fluent.conf"' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nEXPOSE 24224' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\n### docker run -p 24224 -v `pwd`/log: -v `pwd`/log:/home/ubuntu/log fluent/fluentd:latest' >>   $basedir/fluentd/Dockerfile
-#        printf '%s\nCMD exec fluentd -c /fluentd/etc/$FLUENTD_CONF -p /fluentd/plugins $FLUENTD_OPT' >>   $basedir/fluentd/Dockerfile
-#
-#        
-#        docker build $basedir/fluentd
-#        docker build -t localhost:5000/fluentd_graphite $basedir/fluentd
-#        docker run -d --name fluentd-graphite -p 24224:24224 -v /data:/fluentd/log localhost:5000/fluentd_graphite
+        docker run --name local-dashboard --link local-mysql:mysql --link local-postgres:postgres --link elkstack_elk_1:elk -d -p $IP_addr:80:80 -p $IP_addr:81:81 -p $IP_addr:8125:8125/udp -p $IP_addr:8126:8126 localhost:5000/grafana-dashboard
 
     else
         echo "#############################################################################################"
