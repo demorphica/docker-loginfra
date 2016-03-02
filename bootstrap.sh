@@ -157,7 +157,7 @@ if echo "$answer" | grep -iq "^y" ;then
         echo 
         cd $basedir/logspout/custom/
         docker build -f Dockerfile -t localhost:5000/logspout .
-        docker run -d -p --name="logspout-localhost" -v /var/run/docker.sock:/tmp/docker.sock -e ROUTE_URIS=logstash://$IP_addr:55514 localhost:5000/logspout:latest 
+        docker run -d --name="logspout-localhost" -v /var/run/docker.sock:/tmp/docker.sock -e ROUTE_URIS=logstash://$IP_addr:55514 localhost:5000/logspout:latest 
         
         echo 
         echo "################################################################################"
