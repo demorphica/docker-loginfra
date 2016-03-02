@@ -1,7 +1,7 @@
 #!/bin/bash
 echo
 echo "################################################################################"
-echo "### Broker Docker infrastructure bootstrap for RHEL 7                         ##"
+echo "### Broker Docker logging infrastructure bootstrap for RHEL 7                 ##"
 echo "################################################################################"
 echo
 
@@ -13,6 +13,8 @@ kern=$(awk "BEGIN {print $kernel - $kernel_min}")
 basedir="/opt/ibm/broker/docker"
 tmpdir="/tmp/_bootstraptmp"
 
+rm -rf $tmpdir
+rm -rf $basedir
 mkdir -p $tmpdir
 mkdir -p $basedir
 
@@ -25,8 +27,10 @@ mkdir -p $basedir/elk-stack
 
 echo
 echo "#######################################################################################################################"
+echo "#######################################################################################################################"
 echo $(uname -a)
 echo "Public IP Address: "$IP_addr
+echo "#######################################################################################################################"
 echo "#######################################################################################################################"
 echo 
 
@@ -34,7 +38,7 @@ echo
 #flush all existing containers, images
 echo
 echo "#######################################################################################################################"
-echo "#        Cleanup? WARNING: This will remove all existing docker containers...                              #"
+echo "#        Cleanup? WARNING: This will remove all existing docker containers...                                         #"
 echo "#             type Ctrl+C to exit if you wish to backup before cleanup                                                #"
 echo "# type "n" to try to setup the environment without cleanup, some containers that already exist will not be redeployed #"
 echo "#######################################################################################################################"
@@ -71,9 +75,13 @@ if echo "$answer" | grep -iq "^y" ;then
 fi
 
 
-#install Docker Engine
-
-echo -n " (Install Docker Engine y/n)? "
+#install Docker Engine & required containers
+echo
+echo "#######################################################################################################################"
+echo "#        Installing...                                                                                                #"
+echo "#######################################################################################################################"
+echo 
+echo -n " (Install Docker Engine and the containers for the logging infrastructure y/n)? "
 read answer
 if echo "$answer" | grep -iq "^y" ;then
     if [ $kern >=0 ] && [ "$arch" ==  "x86_64" ];then
@@ -137,21 +145,19 @@ if echo "$answer" | grep -iq "^y" ;then
 
         echo 
         echo "################################################################################"
-        echo "#  Deploying container initializer for ELK ...                      #"
+        echo "#  Deploying container initializer for ELK ...                                 #"
         echo "################################################################################"
         echo 
-        
-        curl -Lso $basedir/elk-stack/docker-compose.yml https://raw.githubusercontent.com/ChristianKniep/docker-elk/master/docker-compose.yml
         cd $basedir/elk-stack/ && docker-compose up -d 
         
         echo 
-        echo "################################################################################"
-        echo "#  Deploying container for logspout to forward syslog on  127.0.0.1:55514...   #"
-        echo "################################################################################"
+        echo "##########################################################################################"
+        echo "#  Deploying container for logspout to forward STDOUT & STDERR on  "$IP_addr":55514...   #"
+        echo "##########################################################################################"
         echo 
         cd $basedir/logspout/custom/
         docker build -f Dockerfile -t localhost:5000/logspout .
-        docker run -d -p $IP_addr:8000:8000 --name="logspout-localhost" --link elkstack_elk_1:logspout -v /var/run/docker.sock:/tmp/docker.sock -e ROUTE_URIS=logstash://$IP_addr:55514 localhost:5000/logspout:latest 
+        docker run -d -p --name="logspout-localhost" -v /var/run/docker.sock:/tmp/docker.sock -e ROUTE_URIS=logstash://$IP_addr:55514 localhost:5000/logspout:latest 
         
         echo 
         echo "################################################################################"
@@ -161,9 +167,28 @@ if echo "$answer" | grep -iq "^y" ;then
         docker run --name local-postgres -e POSTGRES_DB=grafana -e POSTGRES_PASSWORD=br0k3r! -d -p 127.0.0.1:5432:5432 postgres:latest
         docker run --name local-mysql -e MYSQL_ROOT_PASSWORD=br0k3r! -e MYSQL_DATABASE=grafana -e MYSQL_USER=grafana -e MYSQL_PASSWORD=br0k3r! -d -p 127.0.0.1:3306:3306 mysql:latest
         cd $basedir/docker-grafana-graphite
-        docker exec -i local-mysql mysql grafana < $basedir/docker-grafana-graphite/sesstable.sql
+        sleep 5
+        docker exec -i local-mysql mysql -u root -pbr0k3r! grafana < $basedir/docker-grafana-graphite/sesstable.sql
         docker build -f Dockerfile -t localhost:5000/grafana-dashboard .
-        docker run --name local-dashboard --link local-mysql:mysql --link local-postgres:postgres --link elkstack_elk_1:elk -d -p $IP_addr:80:80 -p $IP_addr:81:81 -p $IP_addr:8125:8125/udp -p $IP_addr:8126:8126 localhost:5000/grafana-dashboard
+        docker run \
+            --name local-dashboard \
+            --link local-mysql:mysql \
+            --link local-postgres:postgres \
+            --link elkstack_elk_1:elk \
+            -d \
+            -p 0.0.0.0:80:80 \
+            -p 0.0.0.0:81:81 \
+            -p 127.0.0.1:7002:7002 \
+            -p 127.0.0.1:8000:8000 \
+            -p 127.0.0.1:8125:8125/udp \
+            -p 127.0.0.1:8126:8126 \
+            -p 127.0.0.1:2003:2003 \
+            -p 127.0.0.1::2003:2003/udp \
+            -p 127.0.0.1:2004:2004 \
+            -p 127.0.0.1::2013:2013 \            
+            -p 127.0.0.1::2013:2013/udp \
+            -p 127.0.0.1:2014:2014 \
+                localhost:5000/grafana-dashboard
 
     else
         echo "#############################################################################################"
@@ -175,60 +200,12 @@ if echo "$answer" | grep -iq "^y" ;then
 else
     exit
 fi
+rm -rf $tmpdir
 echo 
 echo "################################################################################################################"
 echo "# Docker Engine, Docker UI and Docker Compose, Fluentd and Graphite dashboard containers are are now available!#"
 echo "################################################################################################################"
 echo 
-#
-
-#echo -n " (Setup Google Container Engine y/n)? "
-#read answer
-#if echo "$answer" | grep -iq "^y" ;then
-#    echo
-#    echo -n "Deploying container for etcd ..."
-#    echo
-#    docker run --name etcd-local --net=host -d gcr.io/google_containers/etcd:2.0.12 /usr/local/bin/etcd --addr=127.0.0.1:4001 --bind-addr=0.0.0.0:4001 --data-dir=/var/etcd/data 
-#    
-#    echo
-#    echo "####################################################################################################"
-#    echo "#  Deploying hyperkube kubelet and pod for the Google Container Engine kubernetes master ...       #"
-#    echo "####################################################################################################"
-#    echo
-#    docker run \
-#        --volume=/:/rootfs:ro \
-#        --volume=/sys:/sys:ro \
-#        --volume=/dev:/dev \
-#        --volume=/var/lib/docker/:/var/lib/docker:ro \
-#        --volume=/var/lib/kubelet/:/var/lib/kubelet:rw \
-#        --volume=/var/run:/var/run:rw \
-#        --net=host \
-#        --pid=host \
-#        --privileged=true \
-#        -d\
-#        gcr.io/google_containers/hyperkube:v1.0.1 \
-#        /hyperkube kubelet --containerized --hostname-override="127.0.0.1" --address="0.0.0.0" --api-servers=http://$IP_addr:8080 --config=/etc/kubernetes/manifests 
-#    
-#    echo
-#    echo "################################################################################"
-#    echo "#  Deploying Google Container Engine Service Proxy ...                         #"
-#    echo "################################################################################"
-#    echo
-#    docker run -d --net=host --privileged gcr.io/google_containers/hyperkube:v1.0.1 /hyperkube proxy --master=http://127.0.0.1:8080 --v=2 
-#    
-#    echo
-#    echo "################################################################################"
-#    echo "#  Installing kubectl ...                                                      #"
-#    echo "################################################################################"
-#    echo
-#    curl -L https://storage.googleapis.com/kubernetes-release/release/v1.0.1/bin/linux/amd64/kubectl > /usr/local/bin/kubectl
-#    chmod +x /usr/local/bin/kubectl
-#else
-#    exit
-#fi
-#echo "################################################################################"   
-#echo "#  etcd, the hyperkube kubelet, kubernetes, and kubectl are now available!     #"
-#echo "################################################################################"
 echo
 echo "Bootstrap will exit."
 
