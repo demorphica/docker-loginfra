@@ -161,6 +161,7 @@ if echo "$answer" | grep -iq "^y" ;then
         docker run --name local-postgres -e POSTGRES_DB=grafana -e POSTGRES_PASSWORD=br0k3r! -d -p 127.0.0.1:5432:5432 postgres:latest
         docker run --name local-mysql -e MYSQL_ROOT_PASSWORD=br0k3r! -e MYSQL_DATABASE=grafana -e MYSQL_USER=grafana -e MYSQL_PASSWORD=br0k3r! -d -p 127.0.0.1:3306:3306 mysql:latest
         cd $basedir/docker-grafana-graphite
+        docker exec -i local-mysql mysql grafana < $basedir/docker-grafana-graphite/sesstable.sql
         docker build -f Dockerfile -t localhost:5000/grafana-dashboard .
         docker run --name local-dashboard --link local-mysql:mysql --link local-postgres:postgres --link elkstack_elk_1:elk -d -p $IP_addr:80:80 -p $IP_addr:81:81 -p $IP_addr:8125:8125/udp -p $IP_addr:8126:8126 localhost:5000/grafana-dashboard
 
