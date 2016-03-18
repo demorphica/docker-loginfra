@@ -18,7 +18,7 @@ rm -rf $basedir
 mkdir -p $tmpdir
 mkdir -p $basedir
 
-
+yum -y install git net-tools
 cd $tmpdir
 git clone https://github.com/demorphica/docker-loginfra.git
 cd $tmpdir/docker-loginfra/
@@ -110,7 +110,7 @@ if echo "$answer" | grep -iq "^y" ;then
         echo "#  Installing Docker Engine ...                                                #"
         echo "################################################################################"
         echo 
-        yum -y install docker-engine net-tools
+        yum -y install docker-engine
         chkconfig docker on
         
         echo 
